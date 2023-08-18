@@ -1,2 +1,2 @@
 # GP_Fourier_Space
-The first implementation of MAGI
+The setup.py is the first implementation of MAGI 
