@@ -104,15 +104,15 @@ class FTMAGI(object):
                 LQinv = (grid_kernel(ti,ti).add_jitter(nugget) - s.t().matmul(s)).add_jitter(1e-6)._cholesky().inverse()
                 s = s.t().matmul(LCinv)
 
-                # Convert LKinv and m to tensors before calculating their FFT
-                LKinv_tensor = LKinv.to_dense()  # Convert LKinv to a tensor 
-                m_tensor = torch.tensor(m.cpu().numpy())  # Convert m to a tensor
-                # Calculate FFT of required components
+                # Convert LKinv and m to tensors 
+                LKinv_tensor = LKinv.to_dense() 
+                m_tensor = torch.tensor(m.cpu().numpy()) 
+                
+                # Calculate FFT with truncation
                 if truncated and k is not None:
                     LKinv_freq = torch.fft.fft(LKinv_tensor).real[:k, :k]
                     m_freq = torch.fft.fft(m_tensor).real[:k, :]
                 else:
-                    # Compute the full FFT without truncation
                     LKinv_freq = torch.fft.fft(LKinv_tensor).real
                     m_freq = torch.fft.fft(m_tensor).real
                 # store information
@@ -127,16 +127,12 @@ class FTMAGI(object):
             dxdtGP_stds = torch.std(dxdtGP, axis=0)
             self.fOde.update_output_layer(dxdtGP_means, dxdtGP_stds)
 
-
-
         # optimizer for u and theta
         state_optimizer = torch.optim.Adam([u], lr=learning_rate)
         theta_optimizer = torch.optim.Adam(self.fOde.parameters(), lr=learning_rate)
         theta_lambda = lambda epoch: (epoch+1) ** (-0.5)
         theta_lr_scheduler = torch.optim.lr_scheduler.LambdaLR(theta_optimizer, lr_lambda=theta_lambda)
         
-
-
         # optimize initial theta
         # attach gradient for theta
         eps = robust_eps
@@ -203,7 +199,7 @@ class FTMAGI(object):
                     lkh[i,1] = -0.5/outputscale * yiError.square().sum()
                     # p(X'[I]=f(x[I],theta)|X(I)=x(I))
                     
-                    # change the following line to use fft###################################
+                    # change the following line to use fft with truncation 
                     if truncated and k is not None:
                         dxdtOde_freq = torch.fft.fft(dxdtOde[:, i]).real[:k]
                         dxdtGP_freq = torch.fft.fft(gpmat[i]['m_freq'].matmul(x[:, i] - mean)).real[:k]  
@@ -214,8 +210,6 @@ class FTMAGI(object):
                         dxdtGP_freq = torch.fft.fft(gpmat[i]['m_freq'].matmul(x[:, i] - mean)).real
                         diff_freq = dxdtOde_freq - dxdtGP_freq
                         dxidtError_fft = gpmat[i]['LKinv_freq'].matmul(diff_freq)
-
-                    ##########################################################################
                     lkh[i,2] = -0.5/outputscale * (dxidtError_fft**2).sum() / self.grid_size * yiError.size(0)
                 state_loss = -torch.sum(lkh) / self.grid_size
                 state_loss.backward()
