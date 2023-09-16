@@ -104,7 +104,7 @@ class FTMAGI(object):
                 LQinv = (grid_kernel(ti,ti).add_jitter(nugget) - s.t().matmul(s)).add_jitter(1e-6)._cholesky().inverse()
                 s = s.t().matmul(LCinv)
 
-                # Convert LKinv and m to tensors 
+                # Convert LKinv to tensors 
                 LKinv_tensor = LKinv.to_dense()       
                 # Calculate FFT with truncation
                 if truncated and k is not None:
@@ -200,7 +200,7 @@ class FTMAGI(object):
                     lkh[i,1] = -0.5/outputscale * yiError.square().sum()
                     # p(X'[I]=f(x[I],theta)|X(I)=x(I))
                     
-                    # change the following line to use fft with truncation #############################################
+                    # change the following line to use fft with truncation 
                     if truncated and k is not None:
                         dxdtOde_freq = torch.fft.fft(dxdtOde[:, i])[:k]
                         dxdtOde_freq /= len(dxdtOde[:, i])  # Normalize
@@ -221,7 +221,6 @@ class FTMAGI(object):
                         dxidtError_fft = gpmat[i]['LKinv_freq'].matmul(diff_freq)
 
                     lkh[i,2] = -0.5/outputscale * (dxidtError_fft).square().sum() / self.grid_size * yiError.size(0)
-                    ##############################################################
                 state_loss = -torch.sum(lkh) / self.grid_size
                 state_loss.backward()
                 state_optimizer.step()
