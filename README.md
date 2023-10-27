@@ -1,2 +1,2 @@
 # GP_Fourier_Space
-The setup.py is the first implementation of MAGI 
+The infer.py is the first implementation of FTMAGI 
